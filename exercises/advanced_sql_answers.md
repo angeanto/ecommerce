@@ -15,26 +15,38 @@ params as (
 ),
 facts as (
   select
-    date_trunc('day', o.created_at)::date as dt,
-    oli.line_total as amount
+    date_trunc('day', orders.created_at)::date as dt,
+    order_line_items.line_total as amount
   from orders
-  inner join order_line_items on oli.order_id = o.id
-  where o.status in ('paid','shipped','delivered')
-    and o.created_at >= (select month_start from params)
-    and o.created_at <  ((select month_start from params) + interval '1 month')
+  inner join order_line_items
+    on order_line_items.order_id = orders.id
+  where orders.status in ('paid','shipped','delivered')
+    and orders.created_at >= (select month_start from params)
+    and orders.created_at < ((select month_start from params) + interval '1 month')
 ),
 daily as (
-  select dt, sum(amount) as daily_gmv
-  from facts by dt
+  select
+    dt,
+    sum(amount) as daily_gmv
+  from facts
+  group by dt
+),
+running as (
+  select
+    dt,
+    daily_gmv,
+    sum(daily_gmv) over (
+      order by dt
+      rows between unbounded preceding and current row
+    ) as running_gmv
+  from daily
 )
 select
   dt,
   daily_gmv,
-  sum(daily_gmv) over (
-    order by dt
-    rows between unbounded preceding and current row
-  ) as running_gmv
-from daily by dt;
+  running_gmv
+from running
+order by dt;
 ```
 
 ---
@@ -44,8 +56,8 @@ from daily by dt;
 with
 bounds as (
   select
-    min(date_trunc('day', created_at))::date as dmin,
-    max(date_trunc('day', created_at))::date as dmax
+    min(date_trunc('day', orders.created_at))::date as dmin,
+    max(date_trunc('day', orders.created_at))::date as dmax
   from orders
 ),
 days as (
@@ -53,13 +65,19 @@ days as (
   from bounds
 ),
 order_counts as (
-  select date_trunc('day', created_at)::date as dt, count(*) as order_cnt
-  from orders by date_trunc('day', created_at)::date
+  select
+    date_trunc('day', orders.created_at)::date as dt,
+    count(orders.id) as order_cnt
+  from orders
+  group by date_trunc('day', orders.created_at)::date
 ),
 counts as (
-  select d.dt, coalesce(oc.order_cnt, 0) as order_cnt
+  select
+    days.dt,
+    coalesce(order_counts.order_cnt, 0) as order_cnt
   from days
-  left inner join order_counts on oc.dt = d.dt
+  left join order_counts
+    on order_counts.dt = days.dt
 )
 select
   dt,
@@ -68,82 +86,129 @@ select
     order by dt
     rows between 3 preceding and 3 following
   ) as ma7
-from counts by dt;
+from counts
+order by dt;
 ```
 
 ---
 
 ## 3) LAG & LEAD (Inter‑purchase Interval)
 ```sql
+set search_path to app;
+
 with
 ordered as (
   select
-    o.user_id,
-    o.id as order_id,
-    o.created_at
+    orders.user_id,
+    orders.id as order_id,
+    orders.created_at
   from orders
 )
 select
   user_id,
   order_id,
   created_at::date as order_dt,
-  lag(created_at)  over (partition by user_id order by created_at) as prev_order_dt,
-  extract(day from (created_at - lag(created_at) over (partition by user_id order by created_at))) as days_since_prev,
-  lead(created_at) over (partition by user_id order by created_at) as next_order_dt
-from ordered by user_id, created_at;
+  lag(created_at) over (
+    partition by user_id
+    order by created_at
+  ) as prev_order_dt,
+  extract(
+    day from (created_at - lag(created_at) over (
+      partition by user_id
+      order by created_at
+    ))
+  ) as days_since_prev,
+  lead(created_at) over (
+    partition by user_id
+    order by created_at
+  ) as next_order_dt
+from ordered
+order by user_id, created_at;
 ```
 
 ---
 
 ## 4) INTERSECT & EXCEPT (Assortment Overlap)
-**Pick two shops deterministically so the query always runs.**
+
+**INTERSECT**
 ```sql
+set search_path to app;
+
 with
-shop_list as (
-  select id, row_number() over (order by id) as rn
-  from shops
-),
 params as (
   select
-    max(case when rn = 1 then id end)::bigint as shop_a,
-    max(case when rn = 2 then id end)::bigint as shop_b
-  from shop_list
+    'Shop 10'::text as shop_a_name,
+    'Shop 15'::text as shop_b_name
+),
+shop_a as (
+  select shops.id as shop_id
+  from shops
+  inner join params
+    on shops.name = params.shop_a_name
+),
+shop_b as (
+  select shops.id as shop_id
+  from shops
+  inner join params
+    on shops.name = params.shop_b_name
 ),
 a as (
-  select sku_id
-  from products is_active and shop_id = (select shop_a from params)
+  select products.sku_id
+  from products
+  inner join shop_a
+    on products.shop_id = shop_a.shop_id
+  where products.is_active
 ),
 b as (
-  select sku_id
-  from products is_active and shop_id = (select shop_b from params)
+  select products.sku_id
+  from products
+  inner join shop_b
+    on products.shop_id = shop_b.shop_id
+  where products.is_active
 )
--- intersect
 select sku_id from a
+intersect
 select sku_id from b;
 ```
 
-**EXCEPT variant:**
+**EXCEPT**
 ```sql
+set search_path to app;
+
 with
-shop_list as (
-  select id, row_number() over (order by id) as rn
-  from shops
-),
 params as (
   select
-    max(case when rn = 1 then id end)::bigint as shop_a,
-    max(case when rn = 2 then id end)::bigint as shop_b
-  from shop_list
+    'Shop 10'::text as shop_a_name,
+    'Shop 15'::text as shop_b_name
+),
+shop_a as (
+  select shops.id as shop_id
+  from shops
+  inner join params
+    on shops.name = params.shop_a_name
+),
+shop_b as (
+  select shops.id as shop_id
+  from shops
+  inner join params
+    on shops.name = params.shop_b_name
 ),
 a as (
-  select sku_id
-  from products is_active and shop_id = (select shop_a from params)
+  select products.sku_id
+  from products
+  inner join shop_a
+    on products.shop_id = shop_a.shop_id
+  where products.is_active
 ),
 b as (
-  select sku_id
-  from products is_active and shop_id = (select shop_b from params)
+  select products.sku_id
+  from products
+  inner join shop_b
+    on products.shop_id = shop_b.shop_id
+  where products.is_active
 )
 select sku_id from a
+except
 select sku_id from b;
 ```
 
@@ -151,21 +216,42 @@ select sku_id from b;
 
 ## 5) Recursive CTE — Breadcrumbs
 ```sql
+set search_path to app;
+
 with recursive
-roots as (
-  select id, parent_id, name, name::text as path
-  from categories parent_id is null
-),
-walk as (
-  select * from roots all
+anchor as (
   select
-    c.id, c.parent_id, c.name,
-    (w.path || ' > ' || c.name)::text as path
+    categories.id,
+    categories.parent_id,
+    categories.name,
+    categories.name::text as path
   from categories
-  inner join walk on w.id = c.parent_id
+  where categories.parent_id is null
+),
+recursive_member as (
+  select
+    anchor.id,
+    anchor.parent_id,
+    anchor.name,
+    anchor.path
+  from anchor
+  union all
+  select
+    categories.id,
+    categories.parent_id,
+    categories.name,
+    (recursive_member.path || ' > ' || categories.name)::text as path
+  from categories
+  inner join recursive_member
+    on categories.parent_id = recursive_member.id
 )
-select id, parent_id, name, path
-from walk by path;
+select
+  id,
+  parent_id,
+  name,
+  path
+from recursive_member
+order by path;
 ```
 
 **Recursive CTE — GMV roll‑ups by leaf with root label**
@@ -215,28 +301,34 @@ order by root_category, gmv desc;
 
 ## 6) FULL OUTER inner join — Catalog vs Sales Gaps
 ```sql
+set search_path to app, public;
+
 with
 active_skus as (
-  select distinct sku_id from products is_active
+  select distinct products.sku_id
+  from products
+  where products.is_active
 ),
 sold_skus as (
-  select distinct oli.sku_id
+  select distinct order_line_items.sku_id
   from order_line_items
-  inner join orders on o.id = oli.order_id
-  where o.status in ('paid','shipped','delivered')
+  inner join orders
+    on orders.id = order_line_items.order_id
+  where orders.status in ('paid','shipped','delivered')
 )
 select
-  coalesce(a.sku_id, s.sku_id) as sku_id,
-  (a.sku_id is not null) as active_in_catalog,
-  (s.sku_id is not null) as sold,
+  coalesce(active_skus.sku_id, sold_skus.sku_id) as sku_id,
+  (active_skus.sku_id is not null) as active_in_catalog,
+  (sold_skus.sku_id is not null) as sold,
   case
-    when a.sku_id is not null and s.sku_id is not null then 'active & sold'
-    when a.sku_id is not null and s.sku_id is null  then 'active but no sales'
-    when a.sku_id is null  and s.sku_id is not null then 'sold but inactive now'
+    when active_skus.sku_id is not null and sold_skus.sku_id is not null then 'active & sold'
+    when active_skus.sku_id is not null and sold_skus.sku_id is null     then 'active but no sales'
+    when active_skus.sku_id is null     and sold_skus.sku_id is not null then 'sold but inactive now'
     else 'neither'
   end as notes
 from active_skus
-full outer inner join sold_skus on s.sku_id = a.sku_id
+full outer join sold_skus
+  on sold_skus.sku_id = active_skus.sku_id
 order by sku_id;
 ```
 
@@ -247,34 +339,42 @@ order by sku_id;
 ```sql
 with
 t as (
-  select id, sku_code, title from skus
+  select id, sku_code, title
+  from app.skus
 )
 select id, sku_code, title
-from t title ilike 'laptop %'
+from t
+where title ilike 'laptop%'
 order by id
-limit 20;
+
 ```
 
-**B. Literal underscore in `sku_code`**
+**B. Ends with '-13'**
 ```sql
 with
 t as (
-  select id, sku_code from skus
+  select id, sku_code
+  from app.skus
 )
 select id, sku_code
-from t sku_code like '%sku-1\_%' escape '\';
+from t
+where sku_code like '%-13'
+order by sku_code
+
 ```
 
-**C. `SIMILAR TO` three prefixes**
+**C. Includes anywhere '-13'**
 ```sql
 with
 t as (
-  select id, title from skus
+  select id, sku_code
+  from app.skus
 )
-select id, title
-from t title similar to '(smartphone|laptop|blender)%'
-order by id
-limit 20;
+select id, sku_code
+from t
+where sku_code like '%-13%'
+order by sku_code
+
 ```
 
 ---
@@ -283,55 +383,79 @@ limit 20;
 ```sql
 with
 offers as (
-  select p.id as product_id, p.sku_id, p.price, p.shop_id, s.rating
+  select
+    products.id as product_id,
+    products.sku_id,
+    products.price,
+    products.shop_id,
+    shops.rating
   from products
-  inner join shops on s.id = p.shop_id
-  where p.is_active
+  inner join shops
+    on shops.id = products.shop_id
+  where products.is_active
 ),
 sku_min_price as (
-  select sku_id, min(price) as min_price
-  from offers by sku_id
+  select
+    offers.sku_id,
+    min(offers.price) as min_price
+  from offers
+  group by offers.sku_id
 ),
 cheapest_offers as (
-  select o.sku_id, o.product_id, o.shop_id, o.price, o.rating
+  select
+    offers.sku_id,
+    offers.product_id,
+    offers.shop_id,
+    offers.price,
+    offers.rating
   from offers
   inner join sku_min_price
-    on m.sku_id = o.sku_id and m.min_price = o.price
+    on sku_min_price.sku_id = offers.sku_id
+   and sku_min_price.min_price = offers.price
 ),
 best_among_cheapest as (
-  select sku_id, max(rating) as best_rating
-  from cheapest_offers by sku_id
+  select
+    cheapest_offers.sku_id,
+    max(cheapest_offers.rating) as best_rating
+  from cheapest_offers
+  group by cheapest_offers.sku_id
 ),
 final_choice as (
   select
-    c.sku_id,
-    min(c.product_id) as product_id,   -- deterministic choice among ties
-    min(c.shop_id)    as shop_id,
-    min(c.price)      as price,        -- equals min_price
-    max(c.rating)     as shop_rating   -- equals best_rating
+    cheapest_offers.sku_id,
+    min(cheapest_offers.product_id) as product_id,   -- deterministic tie-break
+    min(cheapest_offers.shop_id)    as shop_id,
+    min(cheapest_offers.price)      as price,        -- equals min_price
+    max(cheapest_offers.rating)     as shop_rating   -- equals best_rating
   from cheapest_offers
   inner join best_among_cheapest
-    on b.sku_id = c.sku_id and b.best_rating = c.rating
-  group by c.sku_id
+    on best_among_cheapest.sku_id = cheapest_offers.sku_id
+   and best_among_cheapest.best_rating = cheapest_offers.rating
+  group by cheapest_offers.sku_id
 )
 select *
-from final_choice by sku_id;
+from final_choice
+order by sku_id;
+
 ```
 
 ---
 
 ## 9) GROUPING SETS — Day, Shop, Overall GMV
 ```sql
+set search_path to app, public;
 with
 facts as (
   select
-    date_trunc('day', o.created_at)::date as dt,
-    p.shop_id,
-    oli.line_total as amount
+    date_trunc('day', orders.created_at)::date as dt,
+    products.shop_id,
+    order_line_items.line_total as amount
   from orders
-  inner join order_line_items on oli.order_id = o.id
-  inner join products on p.id = oli.product_id
-  where o.status in ('paid','shipped','delivered')
+  inner join order_line_items
+    on order_line_items.order_id = orders.id
+  inner join products
+    on products.id = order_line_items.product_id
+  where orders.status in ('paid','shipped','delivered')
 )
 select
   case
@@ -343,32 +467,35 @@ select
   dt,
   shop_id,
   sum(amount) as gmv
-from facts by grouping sets (
+from facts
+group by grouping sets (
   (dt),
   (shop_id),
   ()
 )
-order by level, dt nulls last, shop_id nulls last;
+order by level, dt, shop_id
+
 ```
 
 ---
 
 ## 10) Conditional Aggregates with FILTER — Payment Outcomes
 ```sql
+set search_path to app, public;
 with
 payments_daily as (
   select
-    date_trunc('day', created_at)::date as dt,
-    status,
-    amount
+    date_trunc('day', payments.created_at)::date as dt,
+    payments.status,
+    payments.amount
   from payments
 )
 select
   dt,
   sum(amount) filter (where status = 'captured')   as captured_amt,
-  sum(amount) filter (where status = 'authorized') as authorized_amt,
   sum(amount) filter (where status = 'failed')     as failed_amt,
   sum(amount) filter (where status = 'refunded')   as refunded_amt
-from payments_daily by dt
+from payments_daily
+group by dt
 order by dt;
 ```

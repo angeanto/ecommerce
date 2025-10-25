@@ -14,8 +14,6 @@ These exercises are built for the Skroutz‑style marketplace schema you created
 
 **Expected columns:** `dt, daily_gmv, running_gmv`
 
-**Skeleton:**
-
 ---
 
 ## 2) Window Functions — 7‑Day Moving Average (Daily Orders)
@@ -23,7 +21,6 @@ These exercises are built for the Skroutz‑style marketplace schema you created
 
 **Expected columns:** `dt, order_cnt, ma7`
 
-**Skeleton:**
 
 ---
 
@@ -32,33 +29,33 @@ These exercises are built for the Skroutz‑style marketplace schema you created
 
 **Expected columns:** `user_id, order_id, order_dt, prev_order_dt, days_since_prev, next_order_dt`
 
-**Skeleton:**
-
 ---
 
 ## 4) INTERSECT & EXCEPT — Overlapping Assortment
-**Goal:** Compare SKUs offered by two shops: SKUs in common (INTERSECT) and SKUs unique to the first shop (EXCEPT).
+**Goal:** 
+You are the category manager and want to analyze the overlapping assortment between two specific shops by name. Determine:
 
-**You must set the two shops in the `params` CTE.**
+Which SKUs are offered by both shops.
 
-**Skeleton (INTERSECT):**
+Which SKUs are offered by Shop A but not by Shop B.
 
-**Skeleton (EXCEPT):**
+Shops to compare (by name):
+
+Shop A: "Shop 10"
+
+Shop B: "Shop 15"
 
 ---
 
 ## 5) Recursive CTE — Category Breadcrumbs and Roll‑ups
-**Goal A:** Produce full breadcrumb paths from root to every node.
+**Goal A:** Produce full path from root category to leaf.
 
 **Expected columns:** `id, parent_id, name, path`
 
-**Skeleton (Breadcrumbs):**
-
-**Goal B:** GMV by leaf with root label.
+**Goal B:** GMV by leaf with root label. (TO BE UPDATED-NOT READY)
 
 **Expected columns:** `root_category, leaf_category, gmv`
 
-**Skeleton (Roll‑ups):**
 
 ---
 
@@ -67,16 +64,14 @@ These exercises are built for the Skroutz‑style marketplace schema you created
 
 **Expected columns:** `sku_id, active_in_catalog, sold, notes`
 
-**Skeleton:**
-
 ---
 
 ## 7) Advanced LIKE / ILIKE / SIMILAR TO / ESCAPE
 **Goal A:** Case‑insensitive search — titles starting with “Laptop ”.
 
-**Goal B:** Literal underscore in `sku_code`.
+**Goal B:** Ends with "-13".
 
-**Goal C:** `SIMILAR TO` for three prefixes.
+**Goal C:** Includes anywhere "-13"
 
 ---
 
@@ -85,23 +80,16 @@ These exercises are built for the Skroutz‑style marketplace schema you created
 
 **Expected columns:** `sku_id, product_id, shop_id, price, shop_rating`
 
-**Skeleton:**
-
 ---
 
-## 9) GROUPING SETS — Multi‑level GMV (Day, Shop, Overall)
+## 9) GROUPING SETS — Multi‑level GMV (Day, Shop, Overall) --> use grouping sets
 **Goal:** Produce a single result set with GMV by **day**, by **shop**, and the **overall total**.
 
 **Expected columns:** `level, dt, shop_id, gmv`
-
-**Skeleton:**
 
 ---
 
 ## 10) Conditional Aggregates with FILTER — Payment Outcomes
 **Goal:** Daily amounts for each payment status.
 
-**Expected columns:** `dt, captured_amt, authorized_amt, failed_amt, refunded_amt`
-
-**Skeleton:**
-
+**Expected columns:** `dt, captured_amt , failed_amt, refunded_amt`

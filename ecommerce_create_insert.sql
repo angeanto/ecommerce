@@ -1,3 +1,5 @@
+CREATE SCHEMA app AUTHORIZATION postgres;
+SET search_path TO app;
 -- ===========================================================
 -- E-COMMERCE CORE SCHEMA + SYNTHETIC DATA (PostgreSQL 12+)
 -- Safety: drop existing types/tables (idempotent-ish for dev)
@@ -336,6 +338,18 @@ LEFT JOIN LATERAL (SELECT id FROM addresses ORDER BY random() LIMIT 1) a1 ON TRU
 LEFT JOIN LATERAL (SELECT id FROM addresses ORDER BY random() LIMIT 1) a2 ON TRUE
 ORDER BY random()
 LIMIT 1500;
+
+--Add some more orders 
+insert into orders (user_id, shipping_address_id, billing_address_id, status, total_amount, currency, created_at, updated_at)
+select
+  (1 + (random()*200)::int) as user_id,   -- pick among first 200 users
+  null, null,
+  'paid',
+  (random()*200)::numeric(10,2),
+  'EUR',
+  now() - ((random()*60)::int || ' days')::interval,
+  now()
+from generate_series(1, 400);  -- 400 more orders
 
 -- ---------- Order Line Items (1–5 per order)
 -- Sample existing products; reuse product price; keep sku consistency.
