@@ -9,93 +9,88 @@ All solutions obey the constraints:
 
 ## 1) Running Total (GMV)
 ```sql
-WITH
-params AS (
-  SELECT date_trunc('month', now())::date AS month_start
+with
+params as (
+  select date_trunc('month', now())::date as month_start
 ),
-facts AS (
-  SELECT
-    date_trunc('day', o.created_at)::date AS dt,
-    oli.line_total AS amount
-  FROM orders o
-  JOIN order_line_items oli ON oli.order_id = o.id
-  WHERE o.status IN ('paid','shipped','delivered')
-    AND o.created_at >= (SELECT month_start FROM params)
-    AND o.created_at <  ((SELECT month_start FROM params) + interval '1 month')
+facts as (
+  select
+    date_trunc('day', o.created_at)::date as dt,
+    oli.line_total as amount
+  from orders
+  inner join order_line_items on oli.order_id = o.id
+  where o.status in ('paid','shipped','delivered')
+    and o.created_at >= (select month_start from params)
+    and o.created_at <  ((select month_start from params) + interval '1 month')
 ),
-daily AS (
-  SELECT dt, SUM(amount) AS daily_gmv
-  FROM facts
-  GROUP BY dt
+daily as (
+  select dt, sum(amount) as daily_gmv
+  from facts by dt
 )
-SELECT
+select
   dt,
   daily_gmv,
-  SUM(daily_gmv) OVER (
-    ORDER BY dt
-    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-  ) AS running_gmv
-FROM daily
-ORDER BY dt;
+  sum(daily_gmv) over (
+    order by dt
+    rows between unbounded preceding and current row
+  ) as running_gmv
+from daily by dt;
 ```
 
 ---
 
 ## 2) 7‑Day Moving Average (Daily Orders)
 ```sql
-WITH
-bounds AS (
-  SELECT
-    MIN(date_trunc('day', created_at))::date AS dmin,
-    MAX(date_trunc('day', created_at))::date AS dmax
-  FROM orders
+with
+bounds as (
+  select
+    min(date_trunc('day', created_at))::date as dmin,
+    max(date_trunc('day', created_at))::date as dmax
+  from orders
 ),
-days AS (
-  SELECT generate_series(dmin, dmax, interval '1 day')::date AS dt
-  FROM bounds
+days as (
+  select generate_series(dmin, dmax, interval '1 day')::date as dt
+  from bounds
 ),
-order_counts AS (
-  SELECT date_trunc('day', created_at)::date AS dt, COUNT(*) AS order_cnt
-  FROM orders
-  GROUP BY date_trunc('day', created_at)::date
+order_counts as (
+  select date_trunc('day', created_at)::date as dt, count(*) as order_cnt
+  from orders by date_trunc('day', created_at)::date
 ),
-counts AS (
-  SELECT d.dt, COALESCE(oc.order_cnt, 0) AS order_cnt
-  FROM days d
-  LEFT JOIN order_counts oc ON oc.dt = d.dt
+counts as (
+  select d.dt, coalesce(oc.order_cnt, 0) as order_cnt
+  from days
+  left inner join order_counts on oc.dt = d.dt
 )
-SELECT
+select
   dt,
   order_cnt,
-  AVG(order_cnt) OVER (
-    ORDER BY dt
-    ROWS BETWEEN 3 PRECEDING AND 3 FOLLOWING
-  ) AS ma7
-FROM counts
-ORDER BY dt;
+  avg(order_cnt) over (
+    order by dt
+    rows between 3 preceding and 3 following
+  ) as ma7
+from counts by dt;
 ```
 
 ---
 
 ## 3) LAG & LEAD (Inter‑purchase Interval)
 ```sql
-WITH
-ordered AS (
-  SELECT
+with
+ordered as (
+  select
     o.user_id,
-    o.id AS order_id,
+    o.id as order_id,
     o.created_at
-  FROM orders o
+  from orders
 )
-SELECT
+select
   user_id,
   order_id,
-  created_at::date AS order_dt,
-  LAG(created_at)  OVER (PARTITION BY user_id ORDER BY created_at) AS prev_order_dt,
-  EXTRACT(DAY FROM (created_at - LAG(created_at) OVER (PARTITION BY user_id ORDER BY created_at))) AS days_since_prev,
-  LEAD(created_at) OVER (PARTITION BY user_id ORDER BY created_at) AS next_order_dt
-FROM ordered
-ORDER BY user_id, created_at;
+  created_at::date as order_dt,
+  lag(created_at)  over (partition by user_id order by created_at) as prev_order_dt,
+  extract(day from (created_at - lag(created_at) over (partition by user_id order by created_at))) as days_since_prev,
+  lead(created_at) over (partition by user_id order by created_at) as next_order_dt
+from ordered by user_id, created_at;
 ```
 
 ---
@@ -103,156 +98,146 @@ ORDER BY user_id, created_at;
 ## 4) INTERSECT & EXCEPT (Assortment Overlap)
 **Pick two shops deterministically so the query always runs.**
 ```sql
-WITH
-shop_list AS (
-  SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS rn
-  FROM shops
+with
+shop_list as (
+  select id, row_number() over (order by id) as rn
+  from shops
 ),
-params AS (
-  SELECT
-    MAX(CASE WHEN rn = 1 THEN id END)::bigint AS shop_a,
-    MAX(CASE WHEN rn = 2 THEN id END)::bigint AS shop_b
-  FROM shop_list
+params as (
+  select
+    max(case when rn = 1 then id end)::bigint as shop_a,
+    max(case when rn = 2 then id end)::bigint as shop_b
+  from shop_list
 ),
-a AS (
-  SELECT sku_id
-  FROM products
-  WHERE is_active AND shop_id = (SELECT shop_a FROM params)
+a as (
+  select sku_id
+  from products is_active and shop_id = (select shop_a from params)
 ),
-b AS (
-  SELECT sku_id
-  FROM products
-  WHERE is_active AND shop_id = (SELECT shop_b FROM params)
+b as (
+  select sku_id
+  from products is_active and shop_id = (select shop_b from params)
 )
--- INTERSECT
-SELECT sku_id FROM a
-INTERSECT
-SELECT sku_id FROM b;
+-- intersect
+select sku_id from a
+select sku_id from b;
 ```
 
 **EXCEPT variant:**
 ```sql
-WITH
-shop_list AS (
-  SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS rn
-  FROM shops
+with
+shop_list as (
+  select id, row_number() over (order by id) as rn
+  from shops
 ),
-params AS (
-  SELECT
-    MAX(CASE WHEN rn = 1 THEN id END)::bigint AS shop_a,
-    MAX(CASE WHEN rn = 2 THEN id END)::bigint AS shop_b
-  FROM shop_list
+params as (
+  select
+    max(case when rn = 1 then id end)::bigint as shop_a,
+    max(case when rn = 2 then id end)::bigint as shop_b
+  from shop_list
 ),
-a AS (
-  SELECT sku_id
-  FROM products
-  WHERE is_active AND shop_id = (SELECT shop_a FROM params)
+a as (
+  select sku_id
+  from products is_active and shop_id = (select shop_a from params)
 ),
-b AS (
-  SELECT sku_id
-  FROM products
-  WHERE is_active AND shop_id = (SELECT shop_b FROM params)
+b as (
+  select sku_id
+  from products is_active and shop_id = (select shop_b from params)
 )
-SELECT sku_id FROM a
-EXCEPT
-SELECT sku_id FROM b;
+select sku_id from a
+select sku_id from b;
 ```
 
 ---
 
 ## 5) Recursive CTE — Breadcrumbs
 ```sql
-WITH RECURSIVE
-roots AS (
-  SELECT id, parent_id, name, name::text AS path
-  FROM categories
-  WHERE parent_id IS NULL
+with recursive
+roots as (
+  select id, parent_id, name, name::text as path
+  from categories parent_id is null
 ),
-walk AS (
-  SELECT * FROM roots
-  UNION ALL
-  SELECT
+walk as (
+  select * from roots all
+  select
     c.id, c.parent_id, c.name,
-    (w.path || ' > ' || c.name)::text AS path
-  FROM categories c
-  JOIN walk w ON w.id = c.parent_id
+    (w.path || ' > ' || c.name)::text as path
+  from categories
+  inner join walk on w.id = c.parent_id
 )
-SELECT id, parent_id, name, path
-FROM walk
-ORDER BY path;
+select id, parent_id, name, path
+from walk by path;
 ```
 
 **Recursive CTE — GMV roll‑ups by leaf with root label**
 ```sql
-WITH RECURSIVE
-up AS (
-  SELECT id, parent_id, name, id AS root_id, name AS root_name
-  FROM categories
-  WHERE parent_id IS NULL
-  UNION ALL
-  SELECT c.id, c.parent_id, c.name, up.root_id, up.root_name
-  FROM categories c
-  JOIN up ON up.id = c.parent_id
+with recursive
+up as (
+  select id, parent_id, name, id as root_id, name as root_name
+  from categories parent_id is null
+  union all
+  select c.id, c.parent_id, c.name, up.root_id, up.root_name
+  from categories
+  inner join up up.id = c.parent_id
 ),
-sales AS (
-  SELECT
+sales as (
+  select
     oli.sku_id,
-    SUM(oli.line_total) AS gmv
-  FROM order_line_items oli
-  JOIN orders o ON o.id = oli.order_id
-  WHERE o.status IN ('paid','shipped','delivered')
-  GROUP BY oli.sku_id
+    sum(oli.line_total) as gmv
+  from order_line_items
+  inner join orders on o.id = oli.order_id
+  where o.status in ('paid','shipped','delivered')
+  group by oli.sku_id
 ),
-sku_cat AS (
-  SELECT s.id AS sku_id, s.category_id
-  FROM skus s
+sku_cat as (
+  select s.id as sku_id, s.category_id
+  from skus
 ),
-leafs AS (
-  SELECT c.id
-  FROM categories c
-  LEFT JOIN categories ch ON ch.parent_id = c.id
-  WHERE ch.id IS NULL
+leafs as (
+  select c.id
+  from categories
+  left inner join categories on ch.parent_id = c.id
+  where ch.id is null
 )
-SELECT
-  up.root_name AS root_category,
-  c.name       AS leaf_category,
-  COALESCE(SUM(sales.gmv), 0) AS gmv
-FROM leafs l
-JOIN categories c ON c.id = l.id
-JOIN up ON up.id = c.id
-LEFT JOIN sku_cat sc ON sc.category_id = c.id
-LEFT JOIN sales ON sales.sku_id = sc.sku_id
-GROUP BY up.root_name, c.name
-ORDER BY root_category, gmv DESC;
+select
+  up.root_name as root_category,
+  c.name       as leaf_category,
+  coalesce(sum(sales.gmv), 0) as gmv
+from leafs
+inner join categories on c.id = l.id
+inner join up up.id = c.id
+left inner join sku_cat on sc.category_id = c.id
+left inner join sales sales.sku_id = sc.sku_id
+group by up.root_name, c.name
+order by root_category, gmv desc;
 ```
 
 ---
 
-## 6) FULL OUTER JOIN — Catalog vs Sales Gaps
+## 6) FULL OUTER inner join — Catalog vs Sales Gaps
 ```sql
-WITH
-active_skus AS (
-  SELECT DISTINCT sku_id FROM products WHERE is_active
+with
+active_skus as (
+  select distinct sku_id from products is_active
 ),
-sold_skus AS (
-  SELECT DISTINCT oli.sku_id
-  FROM order_line_items oli
-  JOIN orders o ON o.id = oli.order_id
-  WHERE o.status IN ('paid','shipped','delivered')
+sold_skus as (
+  select distinct oli.sku_id
+  from order_line_items
+  inner join orders on o.id = oli.order_id
+  where o.status in ('paid','shipped','delivered')
 )
-SELECT
-  COALESCE(a.sku_id, s.sku_id) AS sku_id,
-  (a.sku_id IS NOT NULL) AS active_in_catalog,
-  (s.sku_id IS NOT NULL) AS sold,
-  CASE
-    WHEN a.sku_id IS NOT NULL AND s.sku_id IS NOT NULL THEN 'active & sold'
-    WHEN a.sku_id IS NOT NULL AND s.sku_id IS NULL  THEN 'active but no sales'
-    WHEN a.sku_id IS NULL  AND s.sku_id IS NOT NULL THEN 'sold but inactive now'
-    ELSE 'neither'
-  END AS notes
-FROM active_skus a
-FULL OUTER JOIN sold_skus s ON s.sku_id = a.sku_id
-ORDER BY sku_id;
+select
+  coalesce(a.sku_id, s.sku_id) as sku_id,
+  (a.sku_id is not null) as active_in_catalog,
+  (s.sku_id is not null) as sold,
+  case
+    when a.sku_id is not null and s.sku_id is not null then 'active & sold'
+    when a.sku_id is not null and s.sku_id is null  then 'active but no sales'
+    when a.sku_id is null  and s.sku_id is not null then 'sold but inactive now'
+    else 'neither'
+  end as notes
+from active_skus
+full outer inner join sold_skus on s.sku_id = a.sku_id
+order by sku_id;
 ```
 
 ---
@@ -260,138 +245,130 @@ ORDER BY sku_id;
 ## 7) Advanced LIKE / ILIKE / SIMILAR TO
 **A. Titles starting with “Laptop ” (case‑insensitive)**
 ```sql
-WITH
-t AS (
-  SELECT id, sku_code, title FROM skus
+with
+t as (
+  select id, sku_code, title from skus
 )
-SELECT id, sku_code, title
-FROM t
-WHERE title ILIKE 'Laptop %'
-ORDER BY id
-LIMIT 20;
+select id, sku_code, title
+from t title ilike 'laptop %'
+order by id
+limit 20;
 ```
 
 **B. Literal underscore in `sku_code`**
 ```sql
-WITH
-t AS (
-  SELECT id, sku_code FROM skus
+with
+t as (
+  select id, sku_code from skus
 )
-SELECT id, sku_code
-FROM t
-WHERE sku_code LIKE '%SKU-1\_%' ESCAPE '\';
+select id, sku_code
+from t sku_code like '%sku-1\_%' escape '\';
 ```
 
 **C. `SIMILAR TO` three prefixes**
 ```sql
-WITH
-t AS (
-  SELECT id, title FROM skus
+with
+t as (
+  select id, title from skus
 )
-SELECT id, title
-FROM t
-WHERE title SIMILAR TO '(Smartphone|Laptop|Blender)%'
-ORDER BY id
-LIMIT 20;
+select id, title
+from t title similar to '(smartphone|laptop|blender)%'
+order by id
+limit 20;
 ```
 
 ---
 
 ## 8) Cheapest Active Offer per SKU — **GROUP BY solution (no DISTINCT ON)**
 ```sql
-WITH
-offers AS (
-  SELECT p.id AS product_id, p.sku_id, p.price, p.shop_id, s.rating
-  FROM products p
-  JOIN shops s ON s.id = p.shop_id
-  WHERE p.is_active
+with
+offers as (
+  select p.id as product_id, p.sku_id, p.price, p.shop_id, s.rating
+  from products
+  inner join shops on s.id = p.shop_id
+  where p.is_active
 ),
-sku_min_price AS (
-  SELECT sku_id, MIN(price) AS min_price
-  FROM offers
-  GROUP BY sku_id
+sku_min_price as (
+  select sku_id, min(price) as min_price
+  from offers by sku_id
 ),
-cheapest_offers AS (
-  SELECT o.sku_id, o.product_id, o.shop_id, o.price, o.rating
-  FROM offers o
-  JOIN sku_min_price m
-    ON m.sku_id = o.sku_id AND m.min_price = o.price
+cheapest_offers as (
+  select o.sku_id, o.product_id, o.shop_id, o.price, o.rating
+  from offers
+  inner join sku_min_price
+    on m.sku_id = o.sku_id and m.min_price = o.price
 ),
-best_among_cheapest AS (
-  SELECT sku_id, MAX(rating) AS best_rating
-  FROM cheapest_offers
-  GROUP BY sku_id
+best_among_cheapest as (
+  select sku_id, max(rating) as best_rating
+  from cheapest_offers by sku_id
 ),
-final_choice AS (
-  SELECT
+final_choice as (
+  select
     c.sku_id,
-    MIN(c.product_id) AS product_id,   -- deterministic choice among ties
-    MIN(c.shop_id)    AS shop_id,
-    MIN(c.price)      AS price,        -- equals min_price
-    MAX(c.rating)     AS shop_rating   -- equals best_rating
-  FROM cheapest_offers c
-  JOIN best_among_cheapest b
-    ON b.sku_id = c.sku_id AND b.best_rating = c.rating
-  GROUP BY c.sku_id
+    min(c.product_id) as product_id,   -- deterministic choice among ties
+    min(c.shop_id)    as shop_id,
+    min(c.price)      as price,        -- equals min_price
+    max(c.rating)     as shop_rating   -- equals best_rating
+  from cheapest_offers
+  inner join best_among_cheapest
+    on b.sku_id = c.sku_id and b.best_rating = c.rating
+  group by c.sku_id
 )
-SELECT *
-FROM final_choice
-ORDER BY sku_id;
+select *
+from final_choice by sku_id;
 ```
 
 ---
 
 ## 9) GROUPING SETS — Day, Shop, Overall GMV
 ```sql
-WITH
-facts AS (
-  SELECT
-    date_trunc('day', o.created_at)::date AS dt,
+with
+facts as (
+  select
+    date_trunc('day', o.created_at)::date as dt,
     p.shop_id,
-    oli.line_total AS amount
-  FROM orders o
-  JOIN order_line_items oli ON oli.order_id = o.id
-  JOIN products p ON p.id = oli.product_id
-  WHERE o.status IN ('paid','shipped','delivered')
+    oli.line_total as amount
+  from orders
+  inner join order_line_items on oli.order_id = o.id
+  inner join products on p.id = oli.product_id
+  where o.status in ('paid','shipped','delivered')
 )
-SELECT
-  CASE
-    WHEN dt IS NOT NULL AND shop_id IS NULL THEN 'by_day'
-    WHEN dt IS NULL     AND shop_id IS NOT NULL THEN 'by_shop'
-    WHEN dt IS NULL     AND shop_id IS NULL THEN 'overall'
-    ELSE 'by_day_shop'
-  END AS level,
+select
+  case
+    when dt is not null and shop_id is null then 'by_day'
+    when dt is null     and shop_id is not null then 'by_shop'
+    when dt is null     and shop_id is null then 'overall'
+    else 'by_day_shop'
+  end as level,
   dt,
   shop_id,
-  SUM(amount) AS gmv
-FROM facts
-GROUP BY GROUPING SETS (
+  sum(amount) as gmv
+from facts by grouping sets (
   (dt),
   (shop_id),
   ()
 )
-ORDER BY level, dt NULLS LAST, shop_id NULLS LAST;
+order by level, dt nulls last, shop_id nulls last;
 ```
 
 ---
 
 ## 10) Conditional Aggregates with FILTER — Payment Outcomes
 ```sql
-WITH
-payments_daily AS (
-  SELECT
-    date_trunc('day', created_at)::date AS dt,
+with
+payments_daily as (
+  select
+    date_trunc('day', created_at)::date as dt,
     status,
     amount
-  FROM payments
+  from payments
 )
-SELECT
+select
   dt,
-  SUM(amount) FILTER (WHERE status = 'captured')   AS captured_amt,
-  SUM(amount) FILTER (WHERE status = 'authorized') AS authorized_amt,
-  SUM(amount) FILTER (WHERE status = 'failed')     AS failed_amt,
-  SUM(amount) FILTER (WHERE status = 'refunded')   AS refunded_amt
-FROM payments_daily
-GROUP BY dt
-ORDER BY dt;
+  sum(amount) filter (where status = 'captured')   as captured_amt,
+  sum(amount) filter (where status = 'authorized') as authorized_amt,
+  sum(amount) filter (where status = 'failed')     as failed_amt,
+  sum(amount) filter (where status = 'refunded')   as refunded_amt
+from payments_daily by dt
+order by dt;
 ```

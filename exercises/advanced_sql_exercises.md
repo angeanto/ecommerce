@@ -1,6 +1,5 @@
 # Advanced SQL Exercises (PostgreSQL) — E‑commerce Schema
-
-These exercises are built for the Skroutz‑style marketplace schema you created earlier.  
+ 
 **Conventions**  
 - Use **CTEs** for every step (no nested subqueries).  
 - Treat monetized orders as those with `orders.status IN ('paid','shipped','delivered')`.  
