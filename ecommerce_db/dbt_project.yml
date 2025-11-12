@@ -1,0 +1,24 @@
+name: ecommerce_db
+profile: ecommerce_db
+models:
+  ecommerce_db:
+    +materialized: view        # sensible default; override below where needed
+
+    # Sources folder contains only YAML declarations (no models materialized)
+    sources:
+      +schema: raw_app            # not used for building models; purely doc grouping
+
+    staging:
+      +schema: staging         # <-- BigQuery dataset for staging models
+      +materialized: view
+      +tags: ["staging"]
+
+    intermediate:
+      +schema: intermediate    # <-- dataset for intermediate models
+      +materialized: table
+      +tags: ["intermediate"]
+
+    marts:
+      +schema: reporting           # <-- dataset for reporting/marts
+      +materialized: table
+      +tags: ["reporting"]

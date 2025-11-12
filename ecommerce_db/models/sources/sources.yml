@@ -1,0 +1,18 @@
+# models/sources/sources.yml
+version: 2
+
+sources:
+  - name: pg
+    database: lead-generator-475609
+    schema: raw_app             # <-- BigQuery dataset with ingested Postgres tables
+    tables:
+      - name: addresses
+      - name: categories
+      - name: order_line_items
+      - name: orders
+      - name: payments
+      - name: products
+      - name: shops
+      - name: skus
+      - name: users
+      - name: users_addresses

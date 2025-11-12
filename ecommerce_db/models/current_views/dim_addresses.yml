@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: dim_addresses_current
+    description: "Current (open) SCD2 rows for addresses."
+    columns:
+      - name: id
+        tests:
+          - not_null
+          - unique

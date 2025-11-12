@@ -1,0 +1,53 @@
+Install VSCode
+
+python -m pip install dbt-core dbt-bigquery
+
+Create a service account with BigQuery permissions.
+
+Download JSON key, then:
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/key.json"
+
+Create folders in models/sources for schemas
+Setup profiles.yml (subl ~/.dbt/profiles.yml )
+Setup dbt_project.yml
+Setup models/sources/sources.yml
+
+Enable DataStream API
+Create the Stream
+
+CREATE PUBLICATION app_pub FOR TABLE
+  app.addresses,
+  app.categories,
+  app.order_line_items,
+  app.orders,
+  app.payments,
+  app.products,
+  app.shops,
+  app.skus,
+  app.users,
+  app.users_addresses
+
+ SELECT * FROM pg_create_logical_replication_slot('datastream_app_slot', 'pgoutput');
+-- Inspect:
+SELECT slot_name, plugin, active FROM pg_replication_slots;
+
+--Health Checks
+SHOW rds.logical_replication;
+SHOW wal_level;
+SHOW max_replication_slots;
+SHOW max_wal_senders;
+
+-- Publications present?
+SELECT * FROM pg_publication;
+
+Modifed max_slot_wal_keep_size to 8192
+
+Create schemas 
+Create stg_addresses.sql
+dbt debug 
+dbt run --select models/staging
+dbt run --select models/intermediate
+Create addresses_hist.sql in /snapshots
+Create folder models/current_views
+dbt snapshot --select addresses_hist
+dbt run --select dim_addresses_current
