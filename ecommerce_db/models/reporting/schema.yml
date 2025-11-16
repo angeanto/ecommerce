@@ -1,0 +1,468 @@
+models:
+  - name: dim_reporting_periods
+    description: ""
+    columns:
+      - name: reporting_period
+        data_type: string
+        description: ""
+
+      - name: reporting_date
+        data_type: date
+        description: ""
+
+      - name: calendar_year
+        data_type: int64
+        description: ""
+
+      - name: calendar_quarter
+        data_type: int64
+        description: ""
+
+      - name: calendar_month
+        data_type: int64
+        description: ""
+
+      - name: calendar_month_name
+        data_type: string
+        description: ""
+
+      - name: iso_week
+        data_type: int64
+        description: ""
+
+      - name: day_of_week
+        data_type: int64
+        description: ""
+
+      - name: day_name
+        data_type: string
+        description: ""
+
+      - name: is_weekend
+        data_type: boolean
+        description: ""
+
+      - name: is_greek_public_holiday
+        data_type: boolean
+        description: ""
+
+      - name: greek_public_holiday_name
+        data_type: string
+        description: ""
+
+  - name: rep_category_performance
+    description: ""
+    columns:
+      - name: category_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: category_name
+        data_type: string
+        description: ""
+
+      - name: category_slug
+        data_type: string
+        description: ""
+
+      - name: category_created_at
+        data_type: timestamp
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: total_quantity
+        data_type: int64
+        description: ""
+
+      - name: total_orders
+        data_type: int64
+        description: ""
+
+      - name: category_revenue_rank
+        data_type: int64
+        description: ""
+
+      - name: revenue_share
+        data_type: numeric
+        description: ""
+
+      - name: cumulative_revenue_share
+        data_type: numeric
+        description: ""
+
+      - name: revenue_diff_vs_prev
+        data_type: numeric
+        description: ""
+
+      - name: revenue_pct_diff_vs_prev
+        data_type: numeric
+        description: ""
+
+      - name: revenue_index
+        data_type: numeric
+        description: ""
+
+      - name: cumulative_category_revenue
+        data_type: numeric
+        description: ""
+
+  - name: rep_main_kpis_per_shop
+    description: ""
+    columns:
+      - name: shop_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: shop_name
+        data_type: string
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: revenue_rank
+        data_type: int64
+        description: ""
+
+      - name: total_products
+        data_type: int64
+        description: ""
+
+      - name: product_count_rank
+        data_type: int64
+        description: ""
+
+      - name: previous_shop_revenue
+        data_type: numeric
+        description: ""
+
+      - name: next_shop_revenue
+        data_type: numeric
+        description: ""
+
+      - name: cumulative_revenue
+        data_type: numeric
+        description: ""
+
+  - name: rep_payment_summary
+    description: ""
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - provider
+            - payment_status
+    columns:
+      - name: provider
+        tests:
+          - not_null
+        data_type: string
+        description: ""
+
+      - name: payment_status
+        tests:
+          - not_null
+        data_type: string
+        description: ""
+
+      - name: total_transactions
+        data_type: int64
+        description: ""
+
+      - name: total_amount
+        data_type: numeric
+        description: ""
+
+      - name: avg_transaction_value
+        data_type: numeric
+        description: ""
+
+      - name: status_transaction_share
+        data_type: float64
+        description: ""
+
+      - name: previous_total_amount
+        data_type: numeric
+        description: ""
+
+      - name: next_total_amount
+        data_type: numeric
+        description: ""
+
+      - name: cumulative_total_amount
+        data_type: numeric
+        description: ""
+
+  - name: rep_product_performance
+    description: ""
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: sku_title
+        data_type: string
+        description: ""
+
+      - name: brand
+        data_type: string
+        description: ""
+
+      - name: category_name
+        data_type: string
+        description: ""
+
+      - name: shop_id
+        data_type: int64
+        description: ""
+
+      - name: shop_name
+        data_type: string
+        description: ""
+
+      - name: product_price
+        data_type: numeric
+        description: ""
+
+      - name: currency
+        data_type: string
+        description: ""
+
+      - name: product_stock
+        data_type: int64
+        description: ""
+
+      - name: product_condition
+        data_type: string
+        description: ""
+
+      - name: product_is_active
+        data_type: boolean
+        description: ""
+
+      - name: total_quantity
+        data_type: int64
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: total_orders
+        data_type: int64
+        description: ""
+
+      - name: product_revenue_rank
+        data_type: int64
+        description: ""
+
+      - name: previous_product_revenue
+        data_type: numeric
+        description: ""
+
+      - name: next_product_revenue
+        data_type: numeric
+        description: ""
+
+      - name: cumulative_product_revenue
+        data_type: numeric
+        description: ""
+
+  - name: rep_revenue_per_period
+    description: ""
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - reporting_period
+            - reporting_date
+    columns:
+      - name: reporting_period
+        tests:
+          - not_null
+        data_type: string
+        description: ""
+
+      - name: reporting_date
+        tests:
+          - not_null
+        data_type: date
+        description: ""
+
+      - name: calendar_year
+        data_type: int64
+        description: ""
+
+      - name: calendar_quarter
+        data_type: int64
+        description: ""
+
+      - name: calendar_month
+        data_type: int64
+        description: ""
+
+      - name: calendar_month_name
+        data_type: string
+        description: ""
+
+      - name: iso_week
+        data_type: int64
+        description: ""
+
+      - name: day_of_week
+        data_type: int64
+        description: ""
+
+      - name: day_name
+        data_type: string
+        description: ""
+
+      - name: is_weekend
+        data_type: boolean
+        description: ""
+
+      - name: is_greek_public_holiday
+        data_type: boolean
+        description: ""
+
+      - name: greek_public_holiday_name
+        data_type: string
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: total_orders
+        data_type: int64
+        description: ""
+
+      - name: prev_total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: next_total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: revenue_change_vs_prev
+        data_type: numeric
+        description: ""
+
+      - name: revenue_pct_change_vs_prev
+        data_type: numeric
+        description: ""
+
+      - name: revenue_last_7_periods
+        data_type: numeric
+        description: ""
+
+      - name: revenue_last_30_periods
+        data_type: numeric
+        description: ""
+
+  - name: rep_user_kpis_per_period
+    description: ""
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - user_id
+            - reporting_period
+            - reporting_date
+    columns:
+      - name: user_id
+        tests:
+          - not_null
+        data_type: int64
+        description: ""
+
+      - name: reporting_period
+        tests:
+          - not_null
+        data_type: string
+        description: ""
+
+      - name: reporting_date
+        tests:
+          - not_null
+        data_type: date
+        description: ""
+
+      - name: calendar_year
+        data_type: int64
+        description: ""
+
+      - name: calendar_quarter
+        data_type: int64
+        description: ""
+
+      - name: calendar_month
+        data_type: int64
+        description: ""
+
+      - name: calendar_month_name
+        data_type: string
+        description: ""
+
+      - name: iso_week
+        data_type: int64
+        description: ""
+
+      - name: day_of_week
+        data_type: int64
+        description: ""
+
+      - name: day_name
+        data_type: string
+        description: ""
+
+      - name: is_weekend
+        data_type: boolean
+        description: ""
+
+      - name: is_greek_public_holiday
+        data_type: boolean
+        description: ""
+
+      - name: greek_public_holiday_name
+        data_type: string
+        description: ""
+
+      - name: total_orders
+        data_type: int64
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: avg_order_value
+        data_type: numeric
+        description: ""
+
+      - name: prev_total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: next_total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: revenue_change_vs_prev
+        data_type: numeric
+        description: ""
+
+      - name: revenue_pct_change_vs_prev
+        data_type: numeric
+        description: ""

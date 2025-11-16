@@ -1,186 +1,378 @@
 sources:
   - name: staging
-    tables:
-      - name: stg_addresses
-        columns:
-          - name: address_id
-            description: "Unique identifier for each address"
-            tests:
-              - unique
-              - not_null
-            data_type: int64
-          - name: address_country
-            data_type: string
-          - name: address_region
-            data_type: string
-          - name: address_city
-            data_type: string
-          - name: address_postal_code
-            data_type: string
-          - name: address_line1
-            data_type: string
-          - name: address_line2
-            data_type: string
-          - name: latitude
-            data_type: numeric
-          - name: longitude
-            data_type: numeric
-          - name: address_created_at
-            data_type: timestamp
+models:
+  - name: stg_addresses
+    description: "Table including addresses"
+    columns:
+      - name: address_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: "Unique id of address"
 
-      - name: stg_categories
-        columns:
-          - name: category_id
-            data_type: int64
-          - name: parent_id
-            data_type: int64
-          - name: category_name
-            data_type: string
-          - name: category_slug
-            data_type: string
-          - name: category_created_at
-            data_type: timestamp
+      - name: address_country
+        data_type: string
+        description: ""
 
-      - name: stg_order_line_items
-        columns:
-          - name: order_line_items_id
-            data_type: int64
-          - name: order_id
-            data_type: int64
-          - name: product_id
-            data_type: int64
-          - name: sku_id
-            data_type: int64
-          - name: quantity
-            data_type: int64
-          - name: unit_price
-            data_type: numeric
-          - name: line_total
-            data_type: numeric
+      - name: address_region
+        data_type: string
+        description: ""
 
-      - name: stg_orders
-        columns:
-          - name: order_id
-            data_type: int64
-          - name: user_id
-            data_type: int64
-          - name: shipping_address_id
-            data_type: int64
-          - name: billing_address_id
-            data_type: int64
-          - name: order_status
-            data_type: string
-          - name: order_total_amount
-            data_type: numeric
-          - name: order_currency
-            data_type: string
-          - name: payment_id
-            data_type: int64
-          - name: order_created_at
-            data_type: timestamp
-          - name: order_updated_at
-            data_type: timestamp
+      - name: address_city
+        data_type: string
+        description: ""
 
-      - name: stg_payments
-        columns:
-          - name: payment_id
-            data_type: int64
-          - name: provider
-            data_type: string
-          - name: payment_status
-            data_type: string
-          - name: payment_amount
-            data_type: numeric
-          - name: payment_currency
-            data_type: string
-          - name: external_ref
-            data_type: string
-          - name: payment_created_at
-            data_type: timestamp
+      - name: address_postal_code
+        data_type: string
+        description: ""
 
-      - name: stg_products
-        columns:
-          - name: product_id
-            data_type: int64
-          - name: product_shop_id
-            data_type: int64
-          - name: sku_id
-            data_type: int64
-          - name: product_price
-            data_type: numeric
-          - name: currency
-            data_type: string
-          - name: product_stock
-            data_type: int64
-          - name: product_condition
-            data_type: string
-          - name: product_is_active
-            data_type: boolean
-          - name: product_created_at
-            data_type: timestamp
+      - name: address_line1
+        data_type: string
+        description: ""
 
-      - name: stg_shops
-        columns:
-          - name: shop_id
-            data_type: int64
-          - name: shop_name
-            data_type: string
-          - name: shop_slug
-            data_type: string
-          - name: shop_url
-            data_type: string
-          - name: shop_rating
-            data_type: numeric
-          - name: shop_status
-            data_type: string
-          - name: shop_created_at
-            data_type: timestamp
+      - name: address_line2
+        data_type: string
+        description: ""
 
-      - name: stg_skus
-        columns:
-          - name: sku_id
-            data_type: int64
-          - name: sku_code
-            data_type: string
-          - name: sku_title
-            data_type: string
-          - name: brand
-            data_type: string
-          - name: category_id
-            data_type: int64
-          - name: sku_attributes
-            data_type: json
-          - name: sku_created_at
-            data_type: timestamp
+      - name: latitude
+        data_type: numeric
+        description: ""
 
-      - name: stg_users
-        columns:
-          - name: user_id
-            data_type: int64
-          - name: user_email
-            data_type: string
-          - name: user_full_name
-            data_type: string
-          - name: user_phone
-            data_type: string
-          - name: user_status
-            data_type: string
-          - name: user_created_at
-            data_type: timestamp
-          - name: user_updated_at
-            data_type: timestamp
+      - name: longitude
+        data_type: numeric
+        description: ""
 
-      - name: stg_users_addresses
-        columns:
-          - name: user_id
-            data_type: int64
-          - name: address_id
-            data_type: int64
-          - name: user_address_label
-            data_type: string
-          - name: is_default_shipping
-            data_type: boolean
-          - name: is_default_billing
-            data_type: boolean
-          - name: user_address_created_at
-            data_type: timestamp
+      - name: address_created_at
+        data_type: timestamp
+        description: ""
+
+  - name: stg_all_dates
+    description: ""
+    columns:
+      - name: date_column
+        tests:
+          - not_null
+          - unique
+        data_type: date
+        description: ""
+
+  - name: stg_categories
+    description: ""
+    columns:
+      - name: category_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: parent_id
+        data_type: int64
+        description: ""
+
+      - name: category_name
+        data_type: string
+        description: ""
+
+      - name: category_slug
+        data_type: string
+        description: ""
+
+      - name: category_created_at
+        data_type: timestamp
+        description: ""
+
+  - name: stg_order_line_items
+    description: ""
+    columns:
+      - name: order_line_items_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: order_id
+        data_type: int64
+        description: ""
+
+      - name: product_id
+        data_type: int64
+        description: ""
+
+      - name: sku_id
+        data_type: int64
+        description: ""
+
+      - name: quantity
+        data_type: int64
+        description: ""
+
+      - name: unit_price
+        data_type: numeric
+        description: ""
+
+      - name: line_total
+        data_type: numeric
+        description: ""
+
+  - name: stg_orders
+    description: ""
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: user_id
+        data_type: int64
+        description: ""
+
+      - name: shipping_address_id
+        data_type: int64
+        description: ""
+
+      - name: billing_address_id
+        data_type: int64
+        description: ""
+
+      - name: order_status
+        data_type: string
+        description: ""
+
+      - name: order_total_amount
+        data_type: numeric
+        description: ""
+
+      - name: order_currency
+        data_type: string
+        description: ""
+
+      - name: payment_id
+        data_type: int64
+        description: ""
+
+      - name: order_created_at
+        data_type: timestamp
+        description: ""
+
+      - name: order_updated_at
+        data_type: timestamp
+        description: ""
+
+  - name: stg_payments
+    description: ""
+    columns:
+      - name: payment_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: provider
+        data_type: string
+        description: ""
+
+      - name: payment_status
+        data_type: string
+        description: ""
+
+      - name: payment_amount
+        data_type: numeric
+        description: ""
+
+      - name: payment_currency
+        data_type: string
+        description: ""
+
+      - name: external_ref
+        data_type: string
+        description: ""
+
+      - name: payment_created_at
+        data_type: timestamp
+        description: ""
+
+  - name: stg_products
+    description: ""
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: product_shop_id
+        data_type: int64
+        description: ""
+
+      - name: sku_id
+        data_type: int64
+        description: ""
+
+      - name: product_price
+        data_type: numeric
+        description: ""
+
+      - name: currency
+        data_type: string
+        description: ""
+
+      - name: product_stock
+        data_type: int64
+        description: ""
+
+      - name: product_condition
+        data_type: string
+        description: ""
+
+      - name: product_is_active
+        data_type: boolean
+        description: ""
+
+      - name: product_created_at
+        data_type: timestamp
+        description: ""
+
+  - name: stg_shops
+    description: ""
+    columns:
+      - name: shop_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: shop_name
+        data_type: string
+        description: ""
+
+      - name: shop_slug
+        data_type: string
+        description: ""
+
+      - name: shop_url
+        data_type: string
+        description: ""
+
+      - name: shop_rating
+        data_type: numeric
+        description: ""
+
+      - name: shop_status
+        data_type: string
+        description: ""
+
+      - name: shop_created_at
+        data_type: timestamp
+        description: ""
+
+  - name: stg_skus
+    description: ""
+    columns:
+      - name: sku_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: sku_code
+        data_type: string
+        description: ""
+
+      - name: sku_title
+        data_type: string
+        description: ""
+
+      - name: brand
+        data_type: string
+        description: ""
+
+      - name: category_id
+        data_type: int64
+        description: ""
+
+      - name: sku_attributes
+        data_type: json
+        description: ""
+
+      - name: sku_created_at
+        data_type: timestamp
+        description: ""
+
+  - name: stg_users
+    description: ""
+    columns:
+      - name: user_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: user_email
+        data_type: string
+        description: ""
+
+      - name: user_full_name
+        data_type: string
+        description: ""
+
+      - name: user_phone
+        data_type: string
+        description: ""
+
+      - name: user_status
+        data_type: string
+        description: ""
+
+      - name: user_created_at
+        data_type: timestamp
+        description: ""
+
+      - name: user_updated_at
+        data_type: timestamp
+        description: ""
+
+  - name: stg_users_addresses
+    description: ""
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - user_id
+            - address_id
+    columns:
+      - name: user_id
+        tests:
+          - not_null
+        data_type: int64
+        description: ""
+
+      - name: address_id
+        tests:
+          - not_null
+        data_type: int64
+        description: ""
+
+      - name: user_address_label
+        data_type: string
+        description: ""
+
+      - name: is_default_shipping
+        data_type: boolean
+        description: ""
+
+      - name: is_default_billing
+        data_type: boolean
+        description: ""
+
+      - name: user_address_created_at
+        data_type: timestamp
+        description: ""

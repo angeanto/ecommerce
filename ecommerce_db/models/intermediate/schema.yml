@@ -1,0 +1,251 @@
+models:
+  - name: int_addresses
+    description: ""
+    columns:
+      - name: address_id
+        data_type: int64
+        description: ""
+
+      - name: address_country
+        data_type: string
+        description: ""
+
+      - name: address_region
+        data_type: string
+        description: ""
+
+      - name: address_city
+        data_type: string
+        description: ""
+
+      - name: address_postal_code
+        data_type: string
+        description: ""
+
+      - name: address_line1
+        data_type: string
+        description: ""
+
+      - name: address_line2
+        data_type: string
+        description: ""
+
+      - name: latitude
+        data_type: numeric
+        description: ""
+
+      - name: longitude
+        data_type: numeric
+        description: ""
+
+      - name: address_created_at
+        data_type: timestamp
+        description: ""
+
+  - name: int_category_hierarchy
+    description: ""
+    columns:
+      - name: category_id
+        data_type: int64
+        description: ""
+
+      - name: parent_id
+        data_type: int64
+        description: ""
+
+      - name: category_name
+        data_type: string
+        description: ""
+
+      - name: root_category_id
+        data_type: int64
+        description: ""
+
+      - name: root_category_name
+        data_type: string
+        description: ""
+
+      - name: depth
+        data_type: int64
+        description: ""
+
+      - name: category_path
+        data_type: string
+        description: ""
+
+  - name: int_category_revenue
+    description: ""
+    columns:
+      - name: category_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: category_name
+        data_type: string
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: total_quantity
+        data_type: int64
+        description: ""
+
+      - name: total_orders
+        data_type: int64
+        description: ""
+
+      - name: category_revenue_rank
+        data_type: int64
+        description: ""
+
+  - name: int_payment_summary
+    description: ""
+    columns:
+      - name: provider
+        data_type: string
+        description: ""
+
+      - name: payment_status
+        data_type: string
+        description: ""
+
+      - name: total_transactions
+        data_type: int64
+        description: ""
+
+      - name: total_amount
+        data_type: numeric
+        description: ""
+
+      - name: amount_rank_within_status
+        data_type: int64
+        description: ""
+
+  - name: int_product_performance
+    description: ""
+    columns:
+      - name: product_id
+        data_type: int64
+        description: ""
+
+      - name: shop_id
+        data_type: int64
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: total_quantity
+        data_type: int64
+        description: ""
+
+      - name: total_orders
+        data_type: int64
+        description: ""
+
+      - name: product_revenue_rank
+        data_type: int64
+        description: ""
+
+  - name: int_products_per_shop
+    description: ""
+    columns:
+      - name: shop_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: shop_name
+        data_type: string
+        description: ""
+
+      - name: total_products
+        data_type: int64
+        description: ""
+
+      - name: product_count_rank
+        data_type: int64
+        description: ""
+
+  - name: int_revenue_daily
+    description: ""
+    columns:
+      - name: order_date
+        data_type: date
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: total_orders
+        data_type: int64
+        description: ""
+
+  - name: int_revenue_per_shop
+    description: ""
+    columns:
+      - name: shop_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: shop_name
+        data_type: string
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: revenue_rank
+        data_type: int64
+        description: ""
+
+  - name: int_user_orders
+    description: ""
+    columns:
+      - name: user_id
+        tests:
+          - not_null
+          - unique
+        data_type: int64
+        description: ""
+
+      - name: total_orders
+        data_type: int64
+        description: ""
+
+      - name: total_revenue
+        data_type: numeric
+        description: ""
+
+      - name: avg_order_value
+        data_type: numeric
+        description: ""
+
+      - name: first_order_date
+        data_type: date
+        description: ""
+
+      - name: last_order_date
+        data_type: date
+        description: ""
+
+      - name: revenue_rank
+        data_type: int64
+        description: ""
+
+      - name: avg_total_revenue_overall
+        data_type: numeric
+        description: ""
