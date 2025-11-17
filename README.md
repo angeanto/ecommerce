@@ -20,17 +20,16 @@ The project demonstrates real-world analytics engineering, including:
 
 This serves as an end-to-end example of how to structure, document, test and operate a dbt project at a professional level.
 
-ecommerce_db
-├── models/
-│   ├── staging/           → Raw → cleaned sources
-│   ├── intermediate/      → Business logic, metrics, calculations
-│   ├── reporting/         → Analytics-ready tables, KPIs, dimensional joins
-│   └── current_views/     → SCD Type 2 "current" tables (dimension versions)
-│
-├── snapshots/             → SCD Type 2 snapshots
-├── macros/                → UDFs, utilities, reusable logic
-├── tests/                 → Custom schema tests
-└── seeds/                 → Seed data (e.g., Greek holidays)
+ecommerce_db  
+│ ── models/  
+│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ ── staging/           → Raw → cleaned sources  
+│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ ── intermediate/      → Business logic, metrics, calculations  
+│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ ── reporting/         → Analytics-ready tables, KPIs, dimensional joins  
+│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ ── current_views/     → SCD Type 2 "current" tables (dimension versions)  
+│ ── snapshots/             → SCD Type 2 snapshots  
+│ ── macros/                → UDFs, utilities, reusable logic  
+│ ── tests/                 → Custom schema tests  
+│ ── seeds/                 → Seed data (e.g., Greek holidays)  
 
 This mirrors real production environments where:
 - Staging standardizes raw input
@@ -44,11 +43,11 @@ This mirrors real production environments where:
 
 This repository serves as both a **teaching platform** and a **reference data model** for:
 
-1. **Data modeling excellence** — normalization, referential integrity, and business constraints.
-2. **Comprehensive SQL practice** — from simple selections to recursive and windowed queries.
-3. **E-commerce analytics** — revenue, performance, product overlap, payment outcomes, etc.
-4. **Realistic business logic** — lifecycle consistency across users, orders, payments, and shops.
-5. **Data storytelling** — bridging raw transactional data and executive-level insights.
+1. **Data modeling excellence** —> normalization, referential integrity, and business constraints.
+2. **Comprehensive SQL practice** —> from simple selections to recursive and windowed queries.
+3. **E-commerce analytics** —> revenue, performance, product overlap, payment outcomes, etc.
+4. **Realistic business logic** —> lifecycle consistency across users, orders, payments, and shops.
+5. **Data storytelling** —> bridging raw transactional data and executive-level insights.
 
 ---
 
@@ -225,8 +224,8 @@ No dimensional enrichments here. Only business logic.
 
 Purpose: analytics-ready, dimensional, enriched models.
 
-Examples:rep_main_kpis_per_shopm, rep_revenue_per_period → aggregated Day / Month / Year, rep_user_kpis and rep_user_kpis_per_period
-, rep_category_performance enriched by category dimensions, rep_payment_summary, rep_product_performance etc
+Examples:`rep_main_kpis_per_shopm, rep_revenue_per_period → aggregated Day / Month / Year, rep_user_kpis and rep_user_kpis_per_period
+, rep_category_performance enriched by category dimensions, rep_payment_summary, rep_product_performance` etc
 
 All reporting models include:
 
@@ -295,7 +294,6 @@ Primary Key Tests
 - unique_combination_of_columns for composite PKs
 
 Examples:
-
 ```
 tests:
   - dbt_utils.unique_combination_of_columns:
@@ -303,28 +301,19 @@ tests:
         - user_id
         - reporting_period
         - reporting_date
-        ```
-
+```
 Referential Integrity Tests
-
 Where appropriate:
-
 ```
 - relationships:
     field: user_id
     to: ref('stg_users')
     column: user_id
-
 ```
-
 Data Quality Tests
-
 - Accepted values (status, enums)
-
 - Freshness (on sources)
-
 - Row-level constraints
-
 📄 Documentation Strategy
 Generate column+model YAML automatically
 
@@ -456,20 +445,12 @@ dbt debug
 - Payment provider funnel performance
 
 ## 🧾 License & Usage
-
 Licensed under the **MIT License**.
-
-You may freely use this repository for **educational**, **demonstration**, or **instructional** purposes — in universities, online courses, or professional workshops.
-
-Attribution is appreciated:
-> “Based on the Amazon-Style E-Commerce Analytics Database by [Your Name / Organization]”
-
 ---
 
 🎓 Learning Value (for mentees & teams)
 
 This repository demonstrates:
-
 ✔ Proper medallion architecture
 ✔ Business-aligned dimensional modeling
 ✔ SCD2 implementation
@@ -480,7 +461,6 @@ This repository demonstrates:
 ✔ Clear separation of logic & semantics
 
 Ideal for:
-
 - Data analytics students
 - Junior data engineers / analytics engineers
 - BI teams migrating to dbt
