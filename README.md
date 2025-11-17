@@ -1,6 +1,7 @@
 # 📘 E-Commerce Analytics Database — Amazon-Style Marketplace Schema
 
 ## Overview
+<img width="1797" height="790" alt="tech_stack drawio" src="https://github.com/user-attachments/assets/afd56add-ac2e-46bf-9fbe-c214aaacd135" />
 
 This repository provides a **complete PostgreSQL database schema and data generation framework** inspired by the **Amazon e-commerce ecosystem**.  
 It is designed as a **realistic, educational, and analytical environment** for demonstrating **advanced SQL concepts, relational modeling, and business analytics**.
