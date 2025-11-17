@@ -225,7 +225,7 @@ No dimensional enrichments here. Only business logic.
 
 Purpose: analytics-ready, dimensional, enriched models.
 
-Examples:`rep_main_kpis_per_shopm, rep_revenue_per_period → aggregated Day / Month / Year, rep_user_kpis and rep_user_kpis_per_period
+Examples:`rep_main_kpis_per_shop, rep_revenue_per_period → aggregated Day / Month / Year, rep_user_kpis and rep_user_kpis_per_period
 , rep_category_performance enriched by category dimensions, rep_payment_summary, rep_product_performance` etc
 
 All reporting models include:
