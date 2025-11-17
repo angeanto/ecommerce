@@ -8,6 +8,36 @@ It is designed as a **realistic, educational, and analytical environment** for d
 The database models the essential structure of a modern marketplace where multiple shops can sell the same SKUs, customers place orders, products belong to hierarchical categories, and payments are tracked with real-world business rules.  
 Synthetic yet logically consistent data enables deep analytical exploration across marketing, sales, and customer domains.
 
+The repo also contains a production-grade dbt project built on top of an Amazon-style e-commerce dataset.
+The project demonstrates real-world analytics engineering, including:
+
+- Medallion modeling (staging → intermediate → reporting)
+- Dimensional modeling (SCD Type 2)
+- Date dimensions & reporting periods
+- Window functions, recursive CTEs, and advanced SQL logic
+- Fully documented models and a comprehensive test suite
+- Business-meaningful KPIs and semantic models
+
+This serves as an end-to-end example of how to structure, document, test and operate a dbt project at a professional level.
+
+ecommerce_db
+├── models/
+│   ├── staging/           → Raw → cleaned sources
+│   ├── intermediate/      → Business logic, metrics, calculations
+│   ├── reporting/         → Analytics-ready tables, KPIs, dimensional joins
+│   └── current_views/     → SCD Type 2 "current" tables (dimension versions)
+│
+├── snapshots/             → SCD Type 2 snapshots
+├── macros/                → UDFs, utilities, reusable logic
+├── tests/                 → Custom schema tests
+└── seeds/                 → Seed data (e.g., Greek holidays)
+
+This mirrors real production environments where:
+- Staging standardizes raw input
+- Intermediate expresses business rules
+- Reporting exposes metrics to BI & ML
+- Current Views deliver SCD2 “current rows”
+- Snapshots hold historical dimension data
 ---
 
 ## 🎯 Project Objectives
@@ -162,6 +192,269 @@ It provides a **holistic and story-driven environment** for practicing real-worl
 
 ---
 
+🧱 Modeling Layers (Medallion)
+1️⃣ Staging Layer (stg_)
+
+Purpose: clean, rename, cast, and standardize raw tables.
+
+Key characteristics:
+
+- One model per raw table
+- Consistent naming (id, created_at, status)
+- No business logic — only cleaning
+- Includes new model: stg_all_dates
+- Primary keys are tested with:
+- not_null
+- unique
+- Composite PKs use
+
+`- dbt_utils.unique_combination_of_columns:
+    combination_of_columns: [user_id, address_id]
+`
+
+2️⃣ Intermediate Layer (int_)
+
+Purpose: express calculations and business metrics.
+
+Contains logic for business entities such us Revenue per day, shop, categorym, User behavior (orders, revenue, first/last order), Category revenue etc
+
+No dimensional enrichments here. Only business logic.
+
+
+3️⃣ Reporting Layer (rep_)
+
+Purpose: analytics-ready, dimensional, enriched models.
+
+Examples:rep_main_kpis_per_shopm, rep_revenue_per_period → aggregated Day / Month / Year, rep_user_kpis and rep_user_kpis_per_period
+, rep_category_performance enriched by category dimensions, rep_payment_summary, rep_product_performance etc
+
+All reporting models include:
+
+- Calendar & date dimension joins
+
+- Lag/lead for previous/next period
+
+- Rolling sums
+
+- Basket of qualitative enrichments (weekday, holiday, seasonality)
+
+This layer is intended for BI dashboards, ML features, and executive reporting.
+
+4️⃣ Current Views (dim_*_current)
+
+These are SCD Type 2 “current row only” views built on top of snapshots.
+
+Example: **dim_addresses_current based** on snapshot addresses_hist
+
+📅 Date Dimension & Reporting Periods
+
+This project includes an industrial-grade calendar system: **stg_all_dates**
+
+Generates a continuous date spine (2015 — Present).
+
+dim_reporting_periods
+
+Produces:
+
+- Day
+
+- Week
+
+- Month
+
+- Quarter
+
+- Year
+
+For each reporting grain, including:
+
+Weekend flags
+
+- Greek public holidays (via seeds)
+
+- Day name, month name, ISO week
+
+- Seasonal labels
+
+Used by reporting models such as:
+
+- rep_revenue_per_period
+
+- rep_user_kpis_per_period
+
+🧪 Testing Strategy
+
+Each layer includes targeted tests.
+
+Primary Key Tests
+
+- unique
+
+- not_null
+
+- unique_combination_of_columns for composite PKs
+
+Examples:
+
+```
+tests:
+  - dbt_utils.unique_combination_of_columns:
+      combination_of_columns:
+        - user_id
+        - reporting_period
+        - reporting_date
+        ```
+
+Referential Integrity Tests
+
+Where appropriate:
+
+```
+- relationships:
+    field: user_id
+    to: ref('stg_users')
+    column: user_id
+
+```
+
+Data Quality Tests
+
+- Accepted values (status, enums)
+
+- Freshness (on sources)
+
+- Row-level constraints
+
+📄 Documentation Strategy
+Generate column+model YAML automatically
+
+Requires package:
+
+```
+packages:
+  - package: dbt-labs/dbt_codegen
+    version: ">=0.12.1"
+```
+
+
+Generate:
+
+```
+dbt run-operation generate_model_yaml --args '{"model_name": "stg_orders"}'
+```
+
+Generate for multiple models:
+
+```
+dbt run-operation generate_model_yaml --args '{
+  "model_names": ["int_revenue_daily", "int_user_orders"]
+}'
+```
+
+Auto-discover models from a folder:
+
+```
+dbt ls -m models/intermediate --output name \
+  | xargs -I{} echo -n '"{}",'
+```
+
+Then wrap inside:
+```
+dbt run-operation generate_model_yaml --args '{"model_names":[ ... ]}'
+```
+⚙️ Essential dbt Commands (Complete 360° List)
+▶ Build everything
+```
+dbt build
+```
+▶ Run models only
+```
+dbt run
+```
+
+Run a specific folder:
+```
+dbt run --select staging
+dbt run --select models/intermediate
+dbt run --select tag:finance
+```
+
+Specific model:
+```
+dbt run --select rep_revenue_per_period
+```
+▶ Test everything
+```
+dbt test
+```
+
+Test only staging:
+```
+dbt test --select staging
+```
+
+Test one model:
+```
+dbt test --select stg_orders
+```
+
+Test only PK tests:
+```
+dbt test --select test_type:unique
+dbt test --select test_type:not_null
+```
+▶ Generate docs
+```
+dbt docs generate
+```
+
+Serve documentation locally:
+```
+dbt docs serve
+```
+▶ Snapshots (SCD2)
+
+Run snapshots:
+```
+dbt snapshot
+```
+▶ Seed files (e.g., Greek Holidays)
+```
+dbt seed
+```
+▶ Build only downstream dependencies
+```
+dbt build --select +int_user_orders
+```
+
+Build entire graph around a model:
+```
+dbt build --select int_user_orders+
+```
+▶ Debug environment
+```
+dbt debug
+```
+🧩 Business Logic Highlights
+- Window Functions
+- Used across intermediate & reporting models:
+- Previous/next period revenue
+- Rolling sums (7-day, 30-day, 7-month)
+- Running totals
+- Window averages
+- Recursive CTEs
+- int_category_hierarchy builds a depth-first tree of category → parent → root.
+- SCD Type 2
+- Address dimension tracked historically with snapshot:
+- addresses_hist
+- dim_addresses_current
+- High-value KPI reporting
+- Lifetime revenue per user
+- Shop-level GMV
+- Category performance
+- Time-grain revenue modeling
+- Payment provider funnel performance
+
 ## 🧾 License & Usage
 
 Licensed under the **MIT License**.
@@ -173,9 +466,26 @@ Attribution is appreciated:
 
 ---
 
-## 👨‍🏫 Author
+🎓 Learning Value (for mentees & teams)
 
-This project is created by a **Antonis Angelakis**,  
-focused on building **realistic, hands-on data environments** that bridge theory and business analytics practice. 
+This repository demonstrates:
 
-It forms part of a broader initiative to teach **mindful, applied data analytics** — connecting data, logic, and business context.
+✔ Proper medallion architecture
+✔ Business-aligned dimensional modeling
+✔ SCD2 implementation
+✔ Calendar table engineering
+✔ Clean SQL conventions (leading commas, CTEs, modularity)
+✔ dbt testing & documentation best practices
+✔ Automated YAML generation
+✔ Clear separation of logic & semantics
+
+Ideal for:
+
+- Data analytics students
+- Junior data engineers / analytics engineers
+- BI teams migrating to dbt
+- Portfolio demonstration projects
+
+🙌 Author
+
+Antonis Angelakis, Principal BI Consultant & Instructor, DataConscious – A mindful approach to analytics
